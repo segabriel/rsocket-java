@@ -21,8 +21,11 @@ import static org.junit.Assert.assertEquals;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.rsocket.Frame;
 import io.rsocket.FrameType;
 import java.nio.charset.StandardCharsets;
+
+import io.rsocket.util.PayloadImpl;
 import org.junit.Test;
 
 public class RequestFrameFlyweightTest {
@@ -34,12 +37,45 @@ public class RequestFrameFlyweightTest {
         RequestFrameFlyweight.encode(
             byteBuf,
             1,
-            0,
+                FrameHeaderFlyweight.FLAGS_M,
             FrameType.REQUEST_STREAM,
             1,
             Unpooled.copiedBuffer("md", StandardCharsets.UTF_8),
             Unpooled.copiedBuffer("d", StandardCharsets.UTF_8));
     assertEquals(
-        "000010000000011900000000010000026d6464", ByteBufUtil.hexDump(byteBuf, 0, encoded));
+        "000010000000011900000000010000026d6464", bufToString(encoded));
+
+    Frame frame = Frame.from(byteBuf);
+
+    PayloadImpl payload = new PayloadImpl(Frame.from(stringToBuf("000010000000011900000000010000026d6464")));
+
+    assertEquals("md", StandardCharsets.UTF_8.decode(payload.getMetadata()).toString());
+  }
+
+  @Test
+  public void testEncodingNullMetadata() {
+    int encoded =
+            RequestFrameFlyweight.encode(
+                    byteBuf,
+                    1,
+                    FrameHeaderFlyweight.FLAGS_M,
+                    FrameType.REQUEST_STREAM,
+                    1,
+                    Unpooled.copiedBuffer("", StandardCharsets.UTF_8),
+                    Unpooled.copiedBuffer("d", StandardCharsets.UTF_8));
+    assertEquals(
+            "00000b0000000119000000000164", bufToString(encoded));
+
+    PayloadImpl payload = new PayloadImpl(Frame.from(stringToBuf("00000b0000000119000000000164")));
+
+    assertEquals("", StandardCharsets.UTF_8.decode(payload.getMetadata()).toString());
+  }
+
+  private String bufToString(int encoded) {
+    return ByteBufUtil.hexDump(byteBuf, 0, encoded);
+  }
+
+  private ByteBuf stringToBuf(CharSequence s) {
+    return Unpooled.wrappedBuffer(ByteBufUtil.decodeHexDump(s));
   }
 }
