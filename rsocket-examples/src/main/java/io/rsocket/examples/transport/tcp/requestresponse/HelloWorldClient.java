@@ -33,16 +33,16 @@ public final class HelloWorldClient {
             (setupPayload, reactiveSocket) ->
                 Mono.just(
                     new AbstractRSocket() {
-                      boolean fail = true;
-
+                        int counter = 0;
                       @Override
                       public Mono<Payload> requestResponse(Payload p) {
-                        if (fail) {
-                          fail = false;
-                          return Mono.error(new Throwable());
-                        } else {
+//                          return Mono.empty();
                           return Mono.just(p);
-                        }
+//                          switch (++counter) {
+//                              case 1: return Mono.error(new Throwable());
+//                              case 2: return Mono.just(p);
+//                              default: return Mono.empty();
+//                          }
                       }
                     }))
         .transport(TcpServerTransport.create("localhost", 7000))
@@ -59,22 +59,25 @@ public final class HelloWorldClient {
         .requestResponse(DefaultPayload.create("Hello"))
         .map(Payload::getDataUtf8)
         .onErrorReturn("error")
-        .doOnNext(System.out::println)
+        .doOnSuccess(System.out::println)
+        .doOnError(System.err::println)
         .block();
 
-    socket
-        .requestResponse(DefaultPayload.create("Hello"))
-        .map(Payload::getDataUtf8)
-        .onErrorReturn("error")
-        .doOnNext(System.out::println)
-        .block();
-
-    socket
-        .requestResponse(DefaultPayload.create("Hello"))
-        .map(Payload::getDataUtf8)
-        .onErrorReturn("error")
-        .doOnNext(System.out::println)
-        .block();
+//    socket
+//        .requestResponse(DefaultPayload.create("Hello"))
+//        .map(Payload::getDataUtf8)
+//        .onErrorReturn("error")
+//        .doOnSuccess(System.out::println)
+//        .doOnError(System.err::println)
+//        .block();
+//
+//    socket
+//        .requestResponse(DefaultPayload.create("Hello"))
+//        .map(Payload::getDataUtf8)
+//        .onErrorReturn("error")
+//        .doOnSuccess(System.out::println)
+//        .doOnError(System.err::println)
+//        .block();
 
     socket.dispose();
   }

@@ -99,11 +99,13 @@ class RSocketClient implements RSocket {
 
     connection
         .send(sendProcessor)
+            .doOnEach(s -> System.err.println(s))
         .doFinally(this::handleSendProcessorCancel)
         .subscribe(null, this::handleSendProcessorError);
 
     connection
         .receive()
+            .doOnEach(s -> System.err.println(s))
         .doOnSubscribe(subscription -> started.onComplete())
         .subscribe(this::handleIncomingFrames, errorConsumer);
   }
@@ -276,10 +278,12 @@ class RSocketClient implements RSocket {
 
               sendProcessor.onNext(requestFrame);
 
-              return receiver
+              return receiver.doOnEach(s -> System.err.println(s))
+                      .doOnError(t -> sendProcessor.onNext(Frame.Error.from(streamId, t)))
+                      .doOnCancel(() -> sendProcessor.onNext(Frame.Cancel.from(streamId)))
                   .singleOrEmpty()
-                  .doOnError(t -> sendProcessor.onNext(Frame.Error.from(streamId, t)))
-                  .doOnCancel(() -> sendProcessor.onNext(Frame.Cancel.from(streamId)))
+
+//                  .doOnTerminate(() -> sendProcessor.onNext(Frame.Cancel.from(streamId)))
                   .doFinally(
                       s -> {
                         receivers.remove(streamId);
@@ -417,6 +421,7 @@ class RSocketClient implements RSocket {
   private void handleIncomingFrames(Frame frame) {
     try {
       int streamId = frame.getStreamId();
+      System.out.println("streamId = " + streamId);
       FrameType type = frame.getType();
       if (streamId == 0) {
         handleStreamZero(type, frame);
@@ -450,6 +455,7 @@ class RSocketClient implements RSocket {
   }
 
   private void handleFrame(int streamId, FrameType type, Frame frame) {
+    System.out.println("streamId = " + streamId + ", type = " + type);
     Subscriber<Payload> receiver = receivers.get(streamId);
     if (receiver == null) {
       handleMissingResponseProcessor(streamId, type, frame);

@@ -64,7 +64,7 @@ public final class TcpDuplexConnection implements DuplexConnection {
 
   @Override
   public Flux<Frame> receive() {
-    return in.receive().map(buf -> Frame.from(buf.retain()));
+    return in.receive().map(buf -> Frame.from(buf.retain())).doOnEach(s -> System.out.println(s));
   }
 
   @Override
